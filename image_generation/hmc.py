@@ -86,7 +86,8 @@ def leapfrog_step(x0,
 def hmc(initial_x,
         step_size,
         num_steps,
-        neg_log_posterior):
+        neg_log_posterior,
+        delta, xstar, phi):
     """Summary
 
     Parameters
@@ -106,7 +107,16 @@ def hmc(initial_x,
         Sample ~ target distribution
     """
 
-    v0 = tf.random_normal(tf.shape(initial_x))
+    ##################################################
+    # add levy jump
+    # inputs: phi, delta, xstar
+    jump = tf.random_uniform(tf.shape(initial_x)) * (delta ** (-phi) - xstar ** (-phi))  # scale to correct range
+    # # # # obtained via CDF inversion of PDF=ch*x**(-1.5) on x in (delta, x_star)
+    jump = (delta ** (-phi) - jump) ** (-1 / phi)  # jump magnitude from inversion on positive range
+    jump = jump * tf.sign(tf.random_uniform(tf.shape(initial_x)) - 0.5)
+    ###################################################
+
+    v0 = tf.random_normal(tf.shape(initial_x)) + jump
     x, v = leapfrog_step(initial_x,
                       v0,
                       step_size=step_size,

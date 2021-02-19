@@ -1,5 +1,5 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from tensorflow.python.platform import flags
 
 from data import Cifar10
@@ -83,6 +83,13 @@ flags.DEFINE_bool('replay_batch', False, 'Use MCMC chains initialized from a rep
 flags.DEFINE_bool('hmc', False, 'Whether to use HMC sampling to train models')
 flags.DEFINE_float('noise_scale', 1.,'Relative amount of noise for MCMC')
 flags.DEFINE_bool('pcd', False, 'whether to use pcd training instead')
+
+
+# Setting for Levy jumps in MCMC
+flags.DEFINE_float('l_delta', 0.01, 'Levy inner threshold')
+flags.DEFINE_float('l_xstar', 0.3, 'Levy outer threshold')
+flags.DEFINE_float('l_phi', 0.5, 'Levy shape factor')
+
 
 # Architecture Settings
 flags.DEFINE_integer('num_filters', 64, 'number of filters for conv nets')
@@ -663,7 +670,7 @@ def main():
                     return FLAGS.temperature * \
                         model.forward(x, weights[0], label=LABEL_SPLIT[j], reuse=True)
 
-                x_last = hmc(x_mod, 15., 10, energy)
+                x_last = hmc(x_mod, 15., 10, energy, FLAGS.l_delta, FLAGS.l_xstar, FLAGS.l_phi)
             else:
                 x_last = x_mod - (lr) * x_grad
 
