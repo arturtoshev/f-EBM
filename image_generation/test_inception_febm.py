@@ -17,6 +17,8 @@ hvd.init()
 from inception import get_inception_score
 from fid import get_fid_score
 
+from sgllmc import levy_noise
+
 flags.DEFINE_string('logdir', 'cachedir', 'location where log of experiments will be stored')
 flags.DEFINE_string('exp', 'default', 'name of experiments')
 flags.DEFINE_bool('cclass', False, 'whether to condition on class')
@@ -46,6 +48,12 @@ flags.DEFINE_string('datasource', 'random', 'default or noise or negative or sin
 flags.DEFINE_string('dataset', 'cifar10', 'cifar10 or imagenet or imagenetfull')
 # Setting for MCMC sampling
 flags.DEFINE_float('gamma_sr', 1.0, 'gamma for gamma scoreing rules')
+
+# Setting for Levy jumps in MCMC
+flags.DEFINE_float('l_delta', 0.01, 'Levy inner threshold')
+flags.DEFINE_float('l_xstar', 0.3, 'Levy outer threshold')
+flags.DEFINE_float('l_phi', 0.5, 'Levy shape factor')
+
 
 FLAGS = flags.FLAGS
 gamma_sr = FLAGS.gamma_sr
@@ -300,8 +308,8 @@ def main(model_list):
         c = lambda i, x: tf.less(i, FLAGS.num_steps)
         def langevin_step(counter, X):
             scale_rate = 1
-
-            X = X + tf.random_normal(tf.shape(X), mean=0.0, stddev=scale_rate * FLAGS.noise_scale * NOISE_SCALE)
+            X = X + scale_rate * FLAGS.noise_scale * NOISE_SCALE * levy_noise(X, FLAGS.l_delta, FLAGS.l_xstar,
+                                                                              FLAGS.l_phi)
 
             energy_noise = model.forward(X, weight, label=Y_GT, reuse=True)
             x_grad = tf.gradients(energy_noise, [X])[0]

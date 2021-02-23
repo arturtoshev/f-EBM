@@ -31,6 +31,8 @@ hvd.init()
 
 from inception import get_inception_score
 
+from sgllmc import levy_noise
+
 torch.manual_seed(hvd.rank())
 np.random.seed(hvd.rank())
 tf.set_random_seed(hvd.rank())
@@ -634,9 +636,8 @@ def main():
         c = lambda i, x: tf.less(i, FLAGS.num_steps)
 
         def langevin_step(counter, x_mod):
-            x_mod = x_mod + tf.random_normal(tf.shape(x_mod),
-                                             mean=0.0,
-                                             stddev=0.005 * FLAGS.rescale * FLAGS.noise_scale)
+            x_mod = x_mod + 0.005 * FLAGS.rescale * FLAGS.noise_scale * levy_noise(X, FLAGS.l_delta,
+                                                                                   FLAGS.l_xstar, FLAGS.l_phi)
 
             energy_noise = energy_start = tf.concat(
                 [model.forward(
